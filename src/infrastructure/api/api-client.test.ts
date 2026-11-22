@@ -38,14 +38,52 @@ describe('ApiClient', () => {
 
   it('maneja errores sin cuerpo JSON', async () => {
     const f = async () => new Response('boom', { status: 502 });
-    await expect(cliente(f as unknown as typeof fetch).get('/x')).rejects.toMatchObject({ status: 502, code: 'INTERNAL' });
+    await expect(cliente(f as unknown as typeof fetch).post('/x')).rejects.toMatchObject({ status: 502, code: 'INTERNAL' });
   });
 
   it('informa fallo de red y sesión expirada en español', async () => {
     const red = async () => { throw new TypeError('fetch failed'); };
-    await expect(cliente(red as unknown as typeof fetch).get('/x')).rejects.toMatchObject({ code: 'RED' });
+    await expect(cliente(red as unknown as typeof fetch).post('/x')).rejects.toMatchObject({ code: 'RED' });
     const sinToken = cliente((async () => json(200, {})) as unknown as typeof fetch, async () => { throw new Error('x'); });
     await expect(sinToken.get('/x')).rejects.toMatchObject({ status: 401, code: 'UNAUTHENTICATED' });
+  });
+
+  it('reintenta GET hasta dos veces ante respuestas 5xx', async () => {
+    vi.useFakeTimers();
+    try {
+      let llamadas = 0;
+      const f = async () => {
+        llamadas += 1;
+        return llamadas < 3 ? json(503, {}) : json(200, { ok: true });
+      };
+      const solicitud = cliente(f as unknown as typeof fetch).get<{ ok: boolean }>('/x');
+      await vi.runAllTimersAsync();
+      await expect(solicitud).resolves.toEqual({ ok: true });
+      expect(llamadas).toBe(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('no reintenta POST ante errores transitorios', async () => {
+    const f = vi.fn(async () => json(503, {}));
+    await expect(cliente(f as unknown as typeof fetch).post('/x')).rejects.toMatchObject({ status: 503 });
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+
+  it('reintenta fallos de red en GET hasta el límite configurado', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = vi.fn(async () => {
+        throw new TypeError('fetch failed');
+      });
+      const solicitud = cliente(f as unknown as typeof fetch).get('/x');
+      await vi.runAllTimersAsync();
+      await expect(solicitud).rejects.toMatchObject({ status: 0, code: 'RED' });
+      expect(f).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('descarga archivos como Blob', async () => {
