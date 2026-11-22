@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Public Sans Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Superficies y texto */
+  --color-fondo: #f3f5f7;
+  --color-superficie: #ffffff;
+  --color-tinta: #14212b;
+  --color-tinta-suave: #51606c;
+  --color-borde: #d9e0e6;
+  --color-lateral: #0e2a36;
+
+  /* Marca */
+  --color-primario: #0b6e7f;
+  --color-primario-oscuro: #08515d;
+
+  /* Estados operativos (coinciden con los colores de la app móvil) */
+  --color-ok: #2b8a57;
+  --color-critico: #c8372d;
+  --color-aviso: #c77d12;
+  --color-info: #2f6db5;
+  --color-sin-senal: #7a56b0;
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--color-fondo);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primario);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgb(14 42 54 / 0.45);
+}
