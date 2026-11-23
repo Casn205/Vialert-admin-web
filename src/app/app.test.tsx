@@ -18,7 +18,8 @@ function montar(ruta = '/') {
 }
 
 async function iniciarSesion(user: ReturnType<typeof userEvent.setup>, email: string, password: string) {
-  await user.type(await screen.findByLabelText('Correo'), email);
+  // La página de login se carga bajo demanda (lazy): con la suite completa puede tardar más de 1 s.
+  await user.type(await screen.findByLabelText('Correo', {}, { timeout: 5000 }), email);
   await user.type(screen.getByLabelText('Contraseña'), password);
   await user.click(screen.getByRole('button', { name: 'Iniciar sesión' }));
 }

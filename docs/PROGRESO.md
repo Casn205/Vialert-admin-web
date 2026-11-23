@@ -37,7 +37,20 @@
 - [x] Lógica pura con pruebas en `core/domain/flota.ts` y `core/domain/alerta-vista.ts`.
 
 **Verificación:** `typecheck`, `lint`, `test` (167) y `build` en verde. **No probado con Google Maps real** (sin clave en el entorno de desarrollo): el dibujo del mapa, el calor de deck.gl y los rectángulos de sectores quedan por comprobar a ojo con tu clave y Map ID vectorial.
-## Fase 3 · Analítica: pendiente
+## Fase 3 · Analítica: entregado (lado web)
+
+- [x] Feature `dashboard`: filtros (hoy, 7 y 30 días, personalizado; tipo, prioridad, simuladas), tarjetas de KPI, gráficas de barras (por estado, día, hora del día, tipo y prioridad), top de sectores, disponibilidad instantánea de la flota y rankings (ambulancias, conductores, paramédicos, hospitales).
+- [x] "Sin dato" (nunca cero) donde `n = 0`, en tarjetas, gráficas y rankings.
+- [x] Botón "Exportar CSV": descarga `GET /reportes/alertas.csv` con los filtros actuales (`alertas_<desde>_<hasta>.csv`); en mock lo genera `MockKpiRepository`.
+- [x] Funciones puras de vista en `core/domain/kpi-vista.ts`; las fórmulas de KPI siguen solo en la API.
+
+**Verificación:** `typecheck`, `lint`, `test` (190) y `build` en verde. Probado con datos simulados; **falta comprobarlo contra la API real.**
+
+**Supuestos y desviaciones (Fase 3):**
+- Se integró el paquete `fase3-web.zip` sin cambios y se añadió `components/ExportarCsv.tsx` (no venía en el paquete). El error de exportación se muestra junto al botón para no depender de `ToastProvider`.
+- Las gráficas son barras con CSS: no se instaló Recharts.
+- Tipo, prioridad y sectores se calculan en el navegador sobre `listarPorRango`; si la consulta se trunca, se avisa en pantalla.
+- `app.test.tsx`: la espera del primer campo del login sube a 5 s (la página es *lazy* y con la suite completa a veces tardaba más de 1 s).
 ## Fase 4 · Seguridad: pendiente
 ## Fase 5 · Despliegue en AWS: no se ejecuta ahora
 
