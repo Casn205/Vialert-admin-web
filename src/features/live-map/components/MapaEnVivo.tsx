@@ -7,8 +7,7 @@ import { limitesDe, type Punto } from '@/core/geo/geo-utils';
 import type { Celda } from '@/core/geo/grid';
 import { MapaBase } from '@/shared-ui';
 import { useMapFilters } from '../store/map-filters';
-import { CapaCalor, CapaSectores } from './CapasHistoricas';
-import { MarcadoresAlertas, MarcadoresHospitales, MarcadoresUnidades } from './Marcadores';
+import { ESTRATEGIAS_CAPA_MAPA } from './capa-mapa-strategies';
 
 /** Encuadra las unidades una sola vez, cuando aparecen. */
 function EncuadreInicial({ puntos }: { puntos: readonly Punto[] }) {
@@ -63,18 +62,25 @@ interface Props {
 export function MapaEnVivo({ unidades, alertas, hospitales, historicas, celdas, ahora }: Props) {
   const { capas, alertaId, unidadId, seleccionarAlerta, seleccionarUnidad } = useMapFilters();
   const puntos = unidades.map((u) => u.ubicacion);
+  const contextoCapas = {
+    unidades,
+    alertas,
+    hospitales,
+    historicas,
+    celdas,
+    ahora,
+    alertaId,
+    unidadId,
+    seleccionarAlerta,
+    seleccionarUnidad,
+  };
+
   return (
     <MapaBase className="h-full min-h-[22rem] w-full overflow-hidden rounded-lg border border-borde" etiqueta="Mapa en vivo de ambulancias y alertas">
       <ConectarEstado />
       <EncuadreInicial puntos={puntos} />
-      {capas.calor && <CapaCalor alertas={historicas} />}
-      {capas.sectores && <CapaSectores celdas={celdas} />}
-      {capas.hospitales && <MarcadoresHospitales hospitales={hospitales} />}
-      {capas.alertas && (
-        <MarcadoresAlertas alertas={alertas} ahora={ahora} seleccionada={alertaId} onElegir={(id) => seleccionarAlerta(id)} />
-      )}
-      {capas.ambulancias && (
-        <MarcadoresUnidades unidades={unidades} seleccionada={unidadId} onElegir={(id) => seleccionarUnidad(id)} />
+      {ESTRATEGIAS_CAPA_MAPA.map(
+        ({ id, Componente }) => capas[id] && <Componente key={id} {...contextoCapas} />,
       )}
     </MapaBase>
   );

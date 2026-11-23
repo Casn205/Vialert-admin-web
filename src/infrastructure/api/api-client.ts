@@ -1,31 +1,31 @@
 /** Cliente HTTP mínimo hacia `ambulancias-api`. Único lugar de la web que habla HTTP. */
 
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-    readonly details?: unknown,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-  get esConflicto(): boolean {
-    return this.status === 409;
-  }
-}
+import {
+  encadenarInterceptors,
+  interceptorMapeoErrores,
+  interceptorReintentos,
+  interceptorToken,
+  type ApiNext,
+} from './api-interceptors';
+
+export { ApiError } from '@/lib/api-errors';
 
 type Query = Record<string, string | number | boolean | Date | undefined>;
 
 export class ApiClient {
   private readonly base: string;
+  private readonly enviarRequest: ApiNext;
 
   constructor(
     baseUrl: string,
-    private readonly getToken: () => Promise<string>,
-    private readonly fetchImpl: typeof fetch = (...args) => globalThis.fetch(...args),
+    getToken: () => Promise<string>,
+    fetchImpl: typeof fetch = (...args) => globalThis.fetch(...args),
   ) {
     this.base = `${baseUrl.replace(/\/+$/, '')}/api/v1`;
+    this.enviarRequest = encadenarInterceptors(
+      [interceptorToken(getToken), interceptorReintentos(), interceptorMapeoErrores()],
+      ({ url, init }) => fetchImpl(url, init),
+    );
   }
 
   get<T>(path: string, query?: Query): Promise<T> {
@@ -49,30 +49,15 @@ export class ApiClient {
     return (await res.json()) as T;
   }
 
-  private async enviar(method: string, path: string, opts: { body?: unknown; query?: Query }): Promise<Response> {
-    let token: string;
-    try {
-      token = await this.getToken();
-    } catch {
-      throw new ApiError(401, 'UNAUTHENTICATED', 'Tu sesión expiró. Vuelve a iniciar sesión.');
-    }
-
-    let res: Response;
-    try {
-      res = await this.fetchImpl(`${this.base}${path}${consulta(opts.query)}`, {
+  private enviar(method: string, path: string, opts: { body?: unknown; query?: Query }): Promise<Response> {
+    return this.enviarRequest({
+      url: `${this.base}${path}${consulta(opts.query)}`,
+      init: {
         method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        },
+        headers: opts.body !== undefined ? { 'Content-Type': 'application/json' } : {},
         body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-      });
-    } catch {
-      throw new ApiError(0, 'RED', 'No se pudo conectar con el servidor. Revisa tu conexión.');
-    }
-
-    if (!res.ok) throw await errorDe(res);
-    return res;
+      },
+    });
   }
 }
 
@@ -87,16 +72,3 @@ function consulta(q?: Query): string {
   return s ? `?${s}` : '';
 }
 
-async function errorDe(res: Response): Promise<ApiError> {
-  try {
-    const j = (await res.json()) as { error?: { code?: string; message?: string; details?: unknown } };
-    return new ApiError(
-      res.status,
-      j.error?.code ?? 'INTERNAL',
-      j.error?.message ?? `Error ${res.status} del servidor`,
-      j.error?.details,
-    );
-  } catch {
-    return new ApiError(res.status, 'INTERNAL', `Error ${res.status} del servidor`);
-  }
-}

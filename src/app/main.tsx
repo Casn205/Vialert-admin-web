@@ -4,7 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { AppProviders } from './AppProviders';
-import { buildDeps } from './build-deps';
+import { createDeps } from './create-deps';
 
 function mostrarError(mensaje: string) {
   const root = document.getElementById('root')!;
@@ -15,7 +15,7 @@ function mostrarError(mensaje: string) {
   root.appendChild(pre);
 }
 
-buildDeps()
+createDeps()
   .then((deps) => {
     createRoot(document.getElementById('root')!).render(
       <StrictMode>
