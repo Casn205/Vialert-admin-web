@@ -15,7 +15,7 @@ describe('ApiClient', () => {
     const [url, init] = f.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('http://api.test/api/v1/ambulancias');
     expect(init.method).toBe('POST');
-    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer tok');
     expect(init.body).toBe('{"a":1}');
   });
 
@@ -78,8 +78,10 @@ describe('ApiClient', () => {
         throw new TypeError('fetch failed');
       });
       const solicitud = cliente(f as unknown as typeof fetch).get('/x');
+      // La expectativa se registra antes de avanzar los temporizadores: si no, el rechazo llega sin manejador.
+      const verificacion = expect(solicitud).rejects.toMatchObject({ status: 0, code: 'RED' });
       await vi.runAllTimersAsync();
-      await expect(solicitud).rejects.toMatchObject({ status: 0, code: 'RED' });
+      await verificacion;
       expect(f).toHaveBeenCalledTimes(3);
     } finally {
       vi.useRealTimers();
